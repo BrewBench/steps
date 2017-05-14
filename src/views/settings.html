@@ -1,0 +1,54 @@
+<div id="settings" class="settings">
+  <div class="panel panel-default">
+    <div class="panel-heading">
+      <div class="left">
+        <h3>Settings</h3>
+      </div>
+      <div class="row">
+        <div class="col-md-12 col-xs-12 right">
+          <div class="btn-group notifications" role="group">
+            <button type="button" class="btn btn-default" style="padding:0 5px 0 5px;" ng-click="settings.notifications.on = !settings.notifications.on">
+              <span class="fa-stack fa-lg" style="top: 3px;">
+                <i class="fa fa-bell fa-stack-1x"></i>
+                <i class="fa fa-ban fa-stack-2x text-danger" ng-show="!settings.notifications.on"></i>
+              </span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="panel-body">
+      <div class="row">
+        <div class="col-md-8 col-xs-8">
+          <label class="adjust">Arduino URL</label>
+          <div class="input-group" role="group">
+            <editable class="poll" model="settings.arduinoUrl" change="saveArduinoUrl()"></editable>
+            <span class="input-group-btn">
+              <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                <span class="caret"></span>
+              </button>
+              <ul class="dropdown-menu">
+                <li ng-repeat="u in urls"><a href="#" ng-click="settings.arduinoUrl=u">{{u}}</a></li>
+              </ul>
+            </span>
+          </div>
+          <label class="adjust">Board Ports</label>
+          <div class="input-group" role="group">
+            <editable class="poll" type="number" model="settings.ports.analog"></editable> Analog
+            <editable class="poll" type="number" model="settings.ports.digital"></editable> Digital
+          </div>
+
+          <label class="adjust">Slack Notification <a href="https://api.slack.com/incoming-webhooks" title="https://api.slack.com/incoming-webhooks" target="_blank"><img src="/assets/img/Slack_Mark_Web.png" width="45"></a></label>
+          <editable class="poll" trim="30" model="settings.notifications.slack"></editable>
+        </div>
+        <div class="col-md-4 col-xs-4">
+          <div class="btn-group-vertical pull-right" role="group">
+            <button class="btn btn-primary" ng-click="addStep()" ng-disabled="kettles.length==5">Add Step</button>
+            <button class="btn btn-warning" ng-click="alert()">Test Alerts</button>
+            <button class="btn btn-default" ng-click="clearSteps($event)"><i class="fa fa-trash"></i> Settings</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
