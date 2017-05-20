@@ -1,6 +1,8 @@
 angular.module('brewbench-steps')
 .controller('mainCtrl', function($scope, $stateParams, $state, $filter, $timeout, $interval, $q, BrewService){
 
+  var notification = null;
+
   $scope.showSettings = true;
   $scope.error_message = '';
 
@@ -63,5 +65,77 @@ angular.module('brewbench-steps')
         step.pin = old_pin;
     }
   };
+
+  $scope.alert = function(step,timer){
+
+    //don't start alerts until we have hit the temp.target
+    if(!timer && step && !step.temp.hit
+    || $scope.settings.notifications.on===false){
+      return;
+    }
+
+    // Desktop / Slack Notification
+    var message, icon = '/assets/img/brewbench-logo.png', color = 'good';
+
+    if(step){
+      icon = '/assets/img/water.png';
+      if(!!step.finished){
+        message = step.name+' is finished';
+      }
+    } else {
+      message = 'Testing Alerts';
+    }
+
+    // Mobile Vibrate Notification
+    if ("vibrate" in navigator) {
+      navigator.vibrate([500, 300, 500]);
+    }
+
+    // Sound Notification
+    if($scope.settings.sounds.on===true){
+      var snd = new Audio((!!timer) ? $scope.settings.sounds.timer : $scope.settings.sounds.alert); // buffers automatically when created
+      snd.play();
+    }
+
+    // Window Notification
+    if("Notification" in window){
+      //close the previous notification
+      if(notification)
+        notification.close();
+
+      if(Notification.permission === "granted"){
+        if(message){
+          if(step)
+            notification = new Notification(step.name,{body:message,icon:icon});
+          else
+            notification = new Notification('Test kettle',{body:message,icon:icon});
+        }
+      } else if(Notification.permission !== 'denied'){
+        Notification.requestPermission(function (permission) {
+          // If the user accepts, let's create a notification
+          if (permission === "granted") {
+            if(message){
+              notification = new Notification(step.name,{body:message,icon:icon});
+            }
+          }
+        });
+      }
+    }
+    // Slack Notification
+    if($scope.settings.notifications.slack.indexOf('http')!==-1){
+      BrewService.slack($scope.settings.notifications.slack,message,color,icon,kettle).then(function(response){
+        // console.log('Slack',response);
+      });
+    }
+  };
+
+  // scope watch
+  $scope.$watch('settings',function(newValue,oldValue){
+    BrewService.settings('settings',newValue);
+  },true);
+
+  $scope.$watch('steps',function(newValue,oldValue){
+    BrewService.settings('steps',newValue);
+  },true);
 
 });
