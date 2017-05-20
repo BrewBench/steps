@@ -1,16 +1,26 @@
 <div class="step-row steps">
   <div class="step-col">
+    <div>
+      <button class="btn btn-default pull-left" ng-click="resetSteps()">Reset Steps</button>
+      <button class="btn btn-primary pull-right" ng-click="addStep()">Add Step</button>
+    </div>
     <ul>
-      <li ng-repeat="step in steps track by $index" ng-class="{'running':(step.running && !step.finished), 'queue': step.queue, 'finished': step.finished}">
+      <li ng-repeat="step in steps track by $index" ng-class="{'running':(step.running && !step.finished), 'trying': step.trying, 'disabled': step.disabled, 'finished': step.finished}">
         <h2>{{$index+1}}</h2>
-      <label class="adjust"><editable model="step.name"></editable> <sup ng-if="step.queue" class="queue">in queue</sup></label>
+      <label class="adjust"><editable model="step.name"></editable>
+        <sup ng-if="step.disabled" class="disabled">disabled</sup>
+        <sup ng-if="step.trying" class="trying">{{step.finished ? 'Stopping' : 'Starting'}}</sup>
+      </label>
       <label class="notes" ng-if="step.notes"><editable model="step.notes"></editable></label>
       <div class="input-group" role="group">
         <editable class="seconds" type="number" model="step.seconds"></editable> Seconds
         <span class="input-group-btn">
-          <button type="button" class="btn btn-default" ng-if="step.seconds!==null" ng-click="step.seconds=step.seconds-1" ng-disabled="step.finished"><i class="fa fa-minus fa-lg"></i></button>
-          <button type="button" class="btn btn-default" ng-if="step.seconds!==null" ng-click="step.seconds=step.seconds+1" ng-disabled="step.finished"><i class="fa fa-plus fa-lg"></i></button>
-          <button type="button" class="btn btn-default" ng-if="step.seconds!==null" ng-click="start(step)" ng-disabled="step.queue"><i class="fa fa-lg" ng-class="{'fa-stop-circle':step.running||step.up.running,'fa-play-circle':!step.running&&!step.queue&&!step.up.running,'fa-clock-o':step.queue}"></i></button>
+          <button type="button" class="btn btn-default" ng-click="step.disabled=!step.disabled"><i class="fa fa-lg" ng-class="{'fa-toggle-off':step.disabled, 'fa-toggle-on':!step.disabled}"></i></button>
+          <button type="button" class="btn btn-default" ng-click="changeSeconds(step,step.seconds-1)" ng-disabled="step.finished || step.seconds === 0"><i class="fa fa-minus fa-lg"></i></button>
+          <button type="button" class="btn btn-default" ng-click="changeSeconds(step,step.seconds+1)" ng-disabled="step.finished"><i class="fa fa-plus fa-lg"></i></button>
+          <button type="button" class="btn btn-default" ng-click="startStop($index)" ng-disabled="step.disabled">
+            <i class="fa fa-lg" ng-class="{'fa-stop-circle':step.running||step.up.running,'fa-play-circle':!step.running&&!step.disabled&&!step.trying,'fa-clock-o':step.trying,'fa-ban':step.disabled}"></i>
+          </button>
           <button type="button" class="btn btn-default" ng-click="steps.splice($index, 1);"><i class="fa fa-trash fa-lg"></i></button>
         </span>
       </div>
@@ -21,14 +31,14 @@
           </button>
           <ul class="dropdown-menu pins" ng-if="step.analog">
             <li ng-repeat="p in getPortRange(settings.ports.analog) track by $index" ng-class="{'active': step.pin==p}">
-              <a href="#" ng-click="pinChange(step.pin,p,step.analog); step.pin=p;">A{{p}}
+              <a href="#" ng-click="step.pin=p;">A{{p}}
                 <span class="pininuse" ng-show="pinInUse(p,step.analog)">(In Use)</span>
               </a>
             </li>
           </ul>
           <ul class="dropdown-menu pins" ng-if="!step.analog">
             <li ng-repeat="p in getPortRange(settings.ports.digital) track by $index" ng-class="{'active': step.pin==p}">
-              <a href="#" ng-click="pinChange(step.pin,p,step.analog); step.pin=p;">D{{p}}
+              <a href="#" ng-click="step.pin=p;">D{{p}}
                 <span class="pininuse" ng-show="pinInUse(p,step.analog)">(In Use)</span>
               </a>
             </li>

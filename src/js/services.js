@@ -61,6 +61,16 @@ angular.module('brewbench-steps')
       return q.promise;
     },
 
+    pkg: function(){
+        var q = $q.defer();
+        $http.get('/package.json').then(function(response){
+          q.resolve(response.data);
+        },function(err){
+          q.reject(err);
+        });
+        return q.promise;
+    },
+    
     arduinoWrite: function(analog,sensor,value){
       var q = $q.defer();
       var url = this.domain()+'/arduino/'+(analog?'analog':'digital')+'/'+sensor+'/'+value;

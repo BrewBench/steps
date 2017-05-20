@@ -1,7 +1,7 @@
 angular.module('brewbench-steps')
 .controller('mainCtrl', function($scope, $stateParams, $state, $filter, $timeout, $interval, $q, BrewService){
 
-  var notification = null;
+  var notification = null, timeout = null;
 
   $scope.showSettings = true;
   $scope.error_message = '';
@@ -11,6 +11,7 @@ angular.module('brewbench-steps')
     unit: 'F'
     ,arduinoUrl: '192.168.240.1'
     ,ports: {'analog':5, 'digital':13}
+    ,retrySeconds: 2
     ,notifications: {on:true,slack:'Slack notification webhook Url',last:''}
     ,sounds: {on:true,alert:'/assets/audio/bike.mp3',timer:'/assets/audio/school.mp3'}
   };
@@ -21,6 +22,8 @@ angular.module('brewbench-steps')
     ,analog: false
     ,running: false
     ,finished: false
+    ,disabled: false
+    ,trying: false
     ,seconds: 5
   }];
 
@@ -36,6 +39,15 @@ angular.module('brewbench-steps')
       },1000);
   };
 
+  $scope.resetSteps = function(){
+    $scope.steps = BrewService.settings('steps');
+    _.each($scope.steps, function(step){
+      step.seconds = step.resetSeconds || step.seconds;
+      step.finished = false;
+      step.running = false;
+    });
+  };
+
   $scope.addStep = function(){
       $scope.steps.push({
           name: 'Next Step'
@@ -43,6 +55,8 @@ angular.module('brewbench-steps')
           ,analog: false
           ,running: false
           ,finished: false
+          ,disabled: false
+          ,trying: false
           ,seconds: 5
         });
   };
@@ -58,19 +72,10 @@ angular.module('brewbench-steps')
       return Array(number).fill().map((_, idx) => 0 + idx);
   };
 
-  $scope.pinChange = function(old_pin,new_pin,analog){
-    //find step with new pin and replace it with old pin
-    var step = $scope.pinInUse(new_pin,analog);
-    if(step && step.pin == new_pin){
-        step.pin = old_pin;
-    }
-  };
-
   $scope.alert = function(step,timer){
 
     //don't start alerts until we have hit the temp.target
-    if(!timer && step && !step.temp.hit
-    || $scope.settings.notifications.on===false){
+    if($scope.settings.notifications.on===false){
       return;
     }
 
@@ -81,6 +86,8 @@ angular.module('brewbench-steps')
       icon = '/assets/img/water.png';
       if(!!step.finished){
         message = step.name+' is finished';
+      } else if(step.length){
+        message = 'All Steps have finished';
       }
     } else {
       message = 'Testing Alerts';
@@ -106,7 +113,7 @@ angular.module('brewbench-steps')
       if(Notification.permission === "granted"){
         if(message){
           if(step)
-            notification = new Notification(step.name,{body:message,icon:icon});
+            notification = new Notification(step.name ? step.name : 'Finished',{body:message,icon:icon});
           else
             notification = new Notification('Test kettle',{body:message,icon:icon});
         }
@@ -115,7 +122,7 @@ angular.module('brewbench-steps')
           // If the user accepts, let's create a notification
           if (permission === "granted") {
             if(message){
-              notification = new Notification(step.name,{body:message,icon:icon});
+              notification = new Notification(step.name ? step.name : 'Finished',{body:message,icon:icon});
             }
           }
         });
@@ -129,6 +136,98 @@ angular.module('brewbench-steps')
     }
   };
 
+  $scope.changeSeconds = function(step,seconds){
+    if(seconds >= 0){
+      step.seconds = seconds;
+      step.resetSeconds = seconds;
+    }
+    if(seconds === 0){
+      step.disabled = true;
+    }
+  };
+
+  $scope.stepRun = function($index){
+    var step = $scope.steps[$index];
+    return $interval(function () {
+      //cancel interval if zero out
+      if(step.seconds === 0){
+        //stop running
+        step.finished = true;
+        $scope.startStop($index);
+      } else if(step.seconds > 0){
+        //count down seconds
+        step.seconds--;
+      }
+    },1000);
+  };
+
+  $scope.startStop = function($index){
+    var step = $scope.steps[$index];
+    if(!step)
+      return;
+    else if(step.trying){
+      step.trying = false;
+      return;
+    }
+
+    var start = (step.running) ? 0 : 1; //if running then stop
+
+    step.trying = true;
+    //wait for the step relay to stop
+    BrewService.arduinoWrite(step.analog, step.pin, start).then(function(response){
+      //cancel timeout if we connect
+      if(timeout)
+        $timeout.cancel(timeout);
+      step.trying = false;
+      $scope.error_message = '';
+
+      if(start){
+        step.running = true;
+        //start timer
+        step.interval = $scope.stepRun($index);
+      } else {
+        //stop timer
+        step.running = false;
+        $interval.cancel(step.interval);
+        //if all timers are done send an alert
+        if(_.filter($scope.steps, {finished: true, disabled: false}).length
+          == ($scope.steps.length - _.filter($scope.steps, {disabled: true}).length) ){
+          $scope.alert($scope.steps,true);
+        }
+        //start next step if there is one
+        else if(_.filter($scope.steps, {finished: false, disabled: false}).length){
+          var $nextIndex = _.findIndex($scope.steps, {finished: false, disabled: false});
+          if($nextIndex)
+            $scope.startStop($nextIndex);
+        }
+      }
+    },function(err){
+      if(err && typeof err == 'string')
+        $scope.error_message = err;
+      else
+        $scope.error_message = 'Could not connect to the Arduino at '+BrewService.domain();
+      // retry
+      if(!timeout){
+        timeout = $timeout(function(){
+          $scope.startStop($index);
+        },$scope.settings.retrySeconds*1000);
+      }
+    });
+  };
+
+  $scope.loadConfig = function(){
+    var config = [];
+    if(!$scope.pkg){
+      config.push(BrewService.pkg().then(function(response){
+          $scope.pkg = response;
+          return $scope.settings.sketch_version = response.sketch_version;
+        })
+      );
+    }
+  };
+
+  $scope.loadConfig();
+  
   // scope watch
   $scope.$watch('settings',function(newValue,oldValue){
     BrewService.settings('settings',newValue);
