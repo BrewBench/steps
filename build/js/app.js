@@ -24,6 +24,7 @@ angular.module('brewbench-steps').controller('mainCtrl', function ($scope, $stat
 
   $scope.showSettings = true;
   $scope.error_message = '';
+  $scope.pkg = '';
 
   //default settings values
   $scope.settings = BrewService.settings('settings') || {
@@ -193,6 +194,20 @@ angular.module('brewbench-steps').controller('mainCtrl', function ($scope, $stat
       return;
     }
 
+    function finishedSteps() {
+      //if all timers are done send an alert
+      if (_.filter($scope.steps, { finished: true, disabled: false }).length == $scope.steps.length - _.filter($scope.steps, { disabled: true }).length) {
+        $scope.alert($scope.steps, true);
+      }
+    }
+
+    function startNextStep() {
+      if (_.filter($scope.steps, { finished: false, disabled: false }).length) {
+        var $nextIndex = _.findIndex($scope.steps, { finished: false, disabled: false });
+        if ($nextIndex) $scope.startStop($nextIndex);
+      }
+    }
+
     var start = step.running ? 0 : 1; //if running then stop
 
     if (step.type === 'delay') {
@@ -204,15 +219,8 @@ angular.module('brewbench-steps').controller('mainCtrl', function ($scope, $stat
         //stop timer
         step.running = false;
         $interval.cancel(step.interval);
-        //if all timers are done send an alert
-        if (_.filter($scope.steps, { finished: true, disabled: false }).length == $scope.steps.length - _.filter($scope.steps, { disabled: true }).length) {
-          $scope.alert($scope.steps, true);
-        }
-        //start next step if there is one
-        else if (_.filter($scope.steps, { finished: false, disabled: false }).length) {
-            var $nextIndex = _.findIndex($scope.steps, { finished: false, disabled: false });
-            if ($nextIndex) $scope.startStop($nextIndex);
-          }
+        finishedSteps();
+        startNextStep();
       }
     } else {
       step.trying = true;
@@ -223,7 +231,7 @@ angular.module('brewbench-steps').controller('mainCtrl', function ($scope, $stat
         step.trying = false;
         $scope.error_message = '';
 
-        if (start) {
+        if (!!start) {
           step.running = true;
           //start timer
           step.interval = $scope.stepRun($index);
@@ -231,15 +239,8 @@ angular.module('brewbench-steps').controller('mainCtrl', function ($scope, $stat
           //stop timer
           step.running = false;
           $interval.cancel(step.interval);
-          //if all timers are done send an alert
-          if (_.filter($scope.steps, { finished: true, disabled: false }).length == $scope.steps.length - _.filter($scope.steps, { disabled: true }).length) {
-            $scope.alert($scope.steps, true);
-          }
-          //start next step if there is one
-          else if (_.filter($scope.steps, { finished: false, disabled: false }).length) {
-              var $nextIndex = _.findIndex($scope.steps, { finished: false, disabled: false });
-              if ($nextIndex) $scope.startStop($nextIndex);
-            }
+          finishedSteps();
+          startNextStep();
         }
       }, function (err) {
         if (err && typeof err == 'string') $scope.error_message = err;else $scope.error_message = 'Could not connect to the Arduino at ' + BrewService.domain();
@@ -253,17 +254,28 @@ angular.module('brewbench-steps').controller('mainCtrl', function ($scope, $stat
     }
   };
 
+  // restart step if it was running
+  $scope.init = function () {
+    if (!!$scope.steps) {
+      _.each($scope.steps, function (step, $index) {
+        if (step.running) {
+          step.interval = $scope.stepRun($index);
+        }
+      });
+    }
+  };
+
   $scope.loadConfig = function () {
     var config = [];
     if (!$scope.pkg) {
       config.push(BrewService.pkg().then(function (response) {
         $scope.pkg = response;
-        return $scope.settings.sketch_version = response.sketch_version;
       }));
     }
+    return $q.all(config);
   };
 
-  $scope.loadConfig();
+  $scope.loadConfig().then($scope.init);
 
   // scope watch
   $scope.$watch('settings', function (newValue, oldValue) {
