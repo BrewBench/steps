@@ -1,0 +1,14 @@
+---
+  name: Keg Washer
+  steps:
+    - name: Step One
+      seconds: 10
+      type: digital
+      pin: 2
+    - name: Step Two
+      seconds: 20
+      type: digital
+      pin: 4
+    - name: Step Delay
+      seconds: 30
+      type: delay

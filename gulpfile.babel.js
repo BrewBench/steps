@@ -58,7 +58,7 @@ gulp.task('styles', () => {
 gulp.task('scripts', () => {
   util.log(`Building Scripts ${paths.scripts.src}`);
   return gulp.src(paths.scripts.src)
-    .pipe(babel({ presets: ['es2015']}).on('error', (err) => util.error(err)))
+    // .pipe(babel({ presets: ['es2015']}).on('error', (err) => util.error(err)))
     .pipe(concat('js/app.js'))
     // .pipe(uglify())
     .pipe(gulp.dest(`${dirs.dest}`));
@@ -67,9 +67,9 @@ gulp.task('scripts', () => {
 gulp.task('vendor', () => {
   util.log(`Building Vendor ${paths.vendor.src}`);
   return gulp.src(paths.vendor.src)
-    // .pipe(babel({ presets: ['es2015']}).on('error', (err) => util.error(err)))
+    .pipe(babel({ presets: ['es2015']}).on('error', (err) => util.error(err)))
     .pipe(concat('js/vendor.js'))
-    .pipe(uglify())
+    // .pipe(uglify())
     .pipe(gulp.dest(`${dirs.dest}`));
 });
 

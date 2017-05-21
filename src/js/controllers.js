@@ -12,6 +12,7 @@ angular.module('brewbench-steps')
     unit: 'F'
     ,arduinoUrl: '192.168.240.1'
     ,ports: {'analog':5, 'digital':13}
+    ,recipe: {'name':''}
     ,retrySeconds: 2
     ,notifications: {on:true,slack:'Slack notification webhook Url',last:''}
     ,sounds: {on:true,alert:'/assets/audio/bike.mp3',timer:'/assets/audio/school.mp3'}
@@ -59,18 +60,22 @@ angular.module('brewbench-steps')
     });
   };
 
-  $scope.addStep = function(){
-      $scope.steps.push({
-          name: 'Next Step'
-          ,pin: 2
-          ,type: 'analog'
-          ,running: false
-          ,finished: false
-          ,disabled: false
-          ,trying: false
-          ,seconds: 5
-          ,resetSeconds: 5
-        });
+  $scope.addStep = function(step){
+      if(!step) step = {};
+      var newStep = {
+                      name: 'Next Step'
+                      ,pin: 2
+                      ,type: 'analog'
+                      ,running: false
+                      ,finished: false
+                      ,disabled: false
+                      ,trying: false
+                      ,seconds: 5
+                      ,resetSeconds: 5
+                    };
+      if(step.seconds && !step.resetSeconds)
+        step.resetSeconds = step.seconds;
+      $scope.steps.push(_.merge(newStep, step));
   };
 
   $scope.pinInUse = function(pin,type){
@@ -268,6 +273,23 @@ angular.module('brewbench-steps')
       );
     }
     return $q.all(config);
+  };
+
+  $scope.importSteps = function($fileContent,$ext){
+    var importContent = YAML.parse($fileContent);
+    if(importContent){
+      if(importContent.name)
+      $scope.settings.recipe.name = importContent.name;
+      $scope.steps = [];
+      if(importContent.steps){
+        _.each(importContent.steps, function(step){
+          $scope.addStep(step);
+        });
+      }
+      $scope.recipe_success = true;
+    } else {
+      $scope.recipe_success = false;
+    }
   };
 
   $scope.loadConfig()
