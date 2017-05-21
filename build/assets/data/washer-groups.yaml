@@ -2,15 +2,43 @@
   name: Keg Washer
   groups:
     - name: Clean Sanke
-    - steps:
-      - name: GND for LED
-        seconds: 1
-        type: analog
-        pin: 10
-      - name: 5V for LED
-        seconds: 1
-        type: analog
-        pin: 11
-      - name: Step Delay
-        seconds: 30
-        type: delay
+      steps:
+        - name: Step One
+          seconds: 30
+          type: digital
+          pin: 1
+    - name: Clean PBW
+      steps:
+        - name: Step One
+          seconds: 30
+          type: digital
+          pin: 2
+    - name: Clean SAN
+      steps:
+        - name: Step One
+          seconds: 30
+          type: digital
+          pin: 3
+    - name: Clean Both
+      steps:
+        - name: Step One
+          seconds: 30
+          type: digital
+          pin: 4
+    - name: Wait
+      steps:
+        - name: Step One
+          seconds: 10
+          type: delay
+    - name: Clean Hot
+      steps:
+        - name: Step One
+          seconds: 30
+          type: digital
+          pin: 5
+    - name: Clean Nasty
+      steps:
+        - name: Step One
+          seconds: 30
+          type: digital
+          pin: 6

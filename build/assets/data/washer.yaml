@@ -5,18 +5,22 @@
       seconds: 30
       type: digital
       pin: 1
+      run: 'start/stop'
     - name: Clean PBW
       seconds: 30
       type: digital
       pin: 2
+      run: 'start/stop'
     - name: Clean SAN
       seconds: 30
       type: digital
       pin: 3
+      run: 'start/stop'
     - name: Clean Both
       seconds: 30
       type: digital
       pin: 4
+      run: 'start/stop'
     - name: Wait
       seconds: 10
       type: delay
@@ -24,7 +28,9 @@
       seconds: 30
       type: digital
       pin: 5
+      run: 'start/stop'
     - name: Clean Nasty
       seconds: 30
       type: digital
       pin: 6
+      run: 'start/stop'

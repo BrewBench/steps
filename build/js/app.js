@@ -47,6 +47,7 @@ angular.module('brewbench-steps')
     ,pin: 2
     ,type: 'analog'
     ,group: ''
+    ,run: 'start/stop'
     ,running: false
     ,finished: false
     ,disabled: false
@@ -62,6 +63,15 @@ angular.module('brewbench-steps')
       step.type = 'delay';
     else if(step.type === 'delay')
       step.type = 'analog';
+  };
+
+  $scope.changeRun = function(step){
+    if(step.run === 'start')
+      step.run = 'stop';
+    else if(step.run === 'stop')
+      step.run = 'start/stop';
+    else if(step.run === 'start/stop')
+      step.run = 'start';
   };
 
   $scope.showSettingsSide = function(){
@@ -92,6 +102,7 @@ angular.module('brewbench-steps')
                       ,pin: 2
                       ,type: 'analog'
                       ,group: ''
+                      ,run: 'start/stop'
                       ,running: false
                       ,finished: false
                       ,disabled: false
@@ -245,6 +256,22 @@ angular.module('brewbench-steps')
       }
     } else {
       step.trying = true;
+
+      // is this a start or stop step that finished?
+      if(step.run !== 'start/stop' && !!step.finished){
+        step.running = false;
+        step.trying = false;
+        $interval.cancel(step.interval);
+        finishedSteps();
+        return startNextStep();
+      } else if(step.run === 'start' && !step.finished && !step.running){
+        // is this a start step?
+        start = 1;
+      } else if(step.run === 'stop' && !step.finished && !step.running){
+        // is this a stop step?
+        start = 0;
+      }
+
       //wait for the step relay to stop
       BrewService.arduinoWrite(step.type, step.pin, start).then(function(response){
         //cancel timeout if we connect
@@ -253,7 +280,7 @@ angular.module('brewbench-steps')
         step.trying = false;
         $scope.error_message = '';
 
-        if(!!start){
+        if(!!start || step.run === 'stop'){
           step.running = true;
           //start timer
           step.interval = $scope.stepRun($index);
