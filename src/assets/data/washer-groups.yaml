@@ -1,0 +1,44 @@
+---
+  name: Keg Washer
+  groups:
+    - name: Clean Sanke
+      steps:
+        - name: Step One
+          seconds: 30
+          type: digital
+          pin: 1
+    - name: Clean PBW
+      steps:
+        - name: Step One
+          seconds: 30
+          type: digital
+          pin: 2
+    - name: Clean SAN
+      steps:
+        - name: Step One
+          seconds: 30
+          type: digital
+          pin: 3
+    - name: Clean Both
+      steps:
+        - name: Step One
+          seconds: 30
+          type: digital
+          pin: 4
+    - name: Wait
+      steps:
+        - name: Step One
+          seconds: 10
+          type: delay
+    - name: Clean Hot
+      steps:
+        - name: Step One
+          seconds: 30
+          type: digital
+          pin: 5
+    - name: Clean Nasty
+      steps:
+        - name: Step One
+          seconds: 30
+          type: digital
+          pin: 6

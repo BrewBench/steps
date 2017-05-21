@@ -22,6 +22,7 @@ angular.module('brewbench-steps')
     name: 'Step'
     ,pin: 2
     ,type: 'analog'
+    ,group: ''
     ,running: false
     ,finished: false
     ,disabled: false
@@ -66,6 +67,7 @@ angular.module('brewbench-steps')
                       name: 'Next Step'
                       ,pin: 2
                       ,type: 'analog'
+                      ,group: ''
                       ,running: false
                       ,finished: false
                       ,disabled: false
@@ -284,6 +286,14 @@ angular.module('brewbench-steps')
       if(importContent.steps){
         _.each(importContent.steps, function(step){
           $scope.addStep(step);
+        });
+      }
+      if(importContent.groups){
+        _.each(importContent.groups, function(group){
+          _.each(group.steps, function(step){
+            step.group = group.name;
+            $scope.addStep(step);
+          });
         });
       }
       $scope.recipe_success = true;

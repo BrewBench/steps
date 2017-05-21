@@ -1,14 +1,30 @@
 ---
   name: Keg Washer
   steps:
-    - name: Step One
-      seconds: 10
+    - name: Clean Sanke
+      seconds: 30
+      type: digital
+      pin: 1
+    - name: Clean PBW
+      seconds: 30
       type: digital
       pin: 2
-    - name: Step Two
-      seconds: 20
+    - name: Clean SAN
+      seconds: 30
+      type: digital
+      pin: 3
+    - name: Clean Both
+      seconds: 30
       type: digital
       pin: 4
-    - name: Step Delay
-      seconds: 30
+    - name: Wait
+      seconds: 10
       type: delay
+    - name: Clean Hot
+      seconds: 30
+      type: digital
+      pin: 5
+    - name: Clean Nasty
+      seconds: 30
+      type: digital
+      pin: 6

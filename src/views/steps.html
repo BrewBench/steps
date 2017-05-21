@@ -11,7 +11,7 @@
         <sup ng-if="step.disabled" class="disabled">disabled</sup>
         <sup ng-if="step.trying" class="trying">{{step.finished ? 'Stopping' : 'Starting'}}</sup>
       </label>
-      <label class="notes" ng-if="step.notes"><editable model="step.notes"></editable></label>
+      <label class="notes" ng-if="step.group"><editable model="step.group"></editable></label>
       <div class="input-group" role="group">
         <editable class="seconds" type="number" model="step.seconds"></editable> Seconds
         <span class="input-group-btn">
