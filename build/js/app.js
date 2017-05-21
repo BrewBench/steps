@@ -38,13 +38,18 @@ angular.module('brewbench-steps').controller('mainCtrl', function ($scope, $stat
   $scope.steps = BrewService.settings('steps') || [{
     name: 'Step',
     pin: 2,
-    analog: false,
+    type: 'analog',
     running: false,
     finished: false,
     disabled: false,
     trying: false,
-    seconds: 5
+    seconds: 5,
+    resetSeconds: 5
   }];
+
+  $scope.changeType = function (step) {
+    if (step.type === 'analog') step.type = 'digital';else if (step.type === 'digital') step.type = 'delay';else if (step.type === 'delay') step.type = 'analog';
+  };
 
   $scope.showSettingsSide = function () {
     $scope.showSettings = !$scope.showSettings;
@@ -71,18 +76,19 @@ angular.module('brewbench-steps').controller('mainCtrl', function ($scope, $stat
     $scope.steps.push({
       name: 'Next Step',
       pin: 2,
-      analog: false,
+      type: 'analog',
       running: false,
       finished: false,
       disabled: false,
       trying: false,
-      seconds: 5
+      seconds: 5,
+      resetSeconds: 5
     });
   };
 
-  $scope.pinInUse = function (pin, analog) {
+  $scope.pinInUse = function (pin, type) {
     return _.find($scope.steps, function (step) {
-      return step.analog === analog && step.pin === pin;
+      return step.type === type && step.pin === pin;
     });
   };
 
@@ -189,14 +195,7 @@ angular.module('brewbench-steps').controller('mainCtrl', function ($scope, $stat
 
     var start = step.running ? 0 : 1; //if running then stop
 
-    step.trying = true;
-    //wait for the step relay to stop
-    BrewService.arduinoWrite(step.analog, step.pin, start).then(function (response) {
-      //cancel timeout if we connect
-      if (timeout) $timeout.cancel(timeout);
-      step.trying = false;
-      $scope.error_message = '';
-
+    if (step.type === 'delay') {
       if (start) {
         step.running = true;
         //start timer
@@ -215,15 +214,43 @@ angular.module('brewbench-steps').controller('mainCtrl', function ($scope, $stat
             if ($nextIndex) $scope.startStop($nextIndex);
           }
       }
-    }, function (err) {
-      if (err && typeof err == 'string') $scope.error_message = err;else $scope.error_message = 'Could not connect to the Arduino at ' + BrewService.domain();
-      // retry
-      if (!timeout) {
-        timeout = $timeout(function () {
-          $scope.startStop($index);
-        }, $scope.settings.retrySeconds * 1000);
-      }
-    });
+    } else {
+      step.trying = true;
+      //wait for the step relay to stop
+      BrewService.arduinoWrite(step.type, step.pin, start).then(function (response) {
+        //cancel timeout if we connect
+        if (timeout) $timeout.cancel(timeout);
+        step.trying = false;
+        $scope.error_message = '';
+
+        if (start) {
+          step.running = true;
+          //start timer
+          step.interval = $scope.stepRun($index);
+        } else {
+          //stop timer
+          step.running = false;
+          $interval.cancel(step.interval);
+          //if all timers are done send an alert
+          if (_.filter($scope.steps, { finished: true, disabled: false }).length == $scope.steps.length - _.filter($scope.steps, { disabled: true }).length) {
+            $scope.alert($scope.steps, true);
+          }
+          //start next step if there is one
+          else if (_.filter($scope.steps, { finished: false, disabled: false }).length) {
+              var $nextIndex = _.findIndex($scope.steps, { finished: false, disabled: false });
+              if ($nextIndex) $scope.startStop($nextIndex);
+            }
+        }
+      }, function (err) {
+        if (err && typeof err == 'string') $scope.error_message = err;else $scope.error_message = 'Could not connect to the Arduino at ' + BrewService.domain();
+        // retry
+        if (!timeout) {
+          timeout = $timeout(function () {
+            $scope.startStop($index);
+          }, $scope.settings.retrySeconds * 1000);
+        }
+      });
+    }
   };
 
   $scope.loadConfig = function () {
@@ -313,6 +340,23 @@ angular.module('brewbench-steps').filter('moment', function () {
   return function (fahrenheit) {
     return Math.round((fahrenheit - 32) * 5 / 9);
   };
+}).filter('titlecase', function () {
+  return function (input) {
+    var smallWords = /^(a|an|and|as|at|but|by|en|for|if|in|nor|of|on|or|per|the|to|vs?\.?|via)$/i;
+
+    input = input.toLowerCase();
+    return input.replace(/[A-Za-z0-9\u00C0-\u00FF]+[^\s-]*/g, function (match, index, title) {
+      if (index > 0 && index + match.length !== title.length && match.search(smallWords) > -1 && title.charAt(index - 2) !== ":" && (title.charAt(index + match.length) !== '-' || title.charAt(index - 1) === '-') && title.charAt(index - 1).search(/[^\s-]/) < 0) {
+        return match.toLowerCase();
+      }
+
+      if (match.substr(1).search(/[A-Z]|\../) > -1) {
+        return match;
+      }
+
+      return match.charAt(0).toUpperCase() + match.substr(1);
+    });
+  };
 });
 'use strict';
 
@@ -381,9 +425,9 @@ angular.module('brewbench-steps').factory('BrewService', function ($http, $q, $f
       return q.promise;
     },
 
-    arduinoWrite: function arduinoWrite(analog, sensor, value) {
+    arduinoWrite: function arduinoWrite(type, sensor, value) {
       var q = $q.defer();
-      var url = this.domain() + '/arduino/' + (analog ? 'analog' : 'digital') + '/' + sensor + '/' + value;
+      var url = this.domain() + '/arduino/' + type + '/' + sensor + '/' + value;
 
       $http({ url: url, method: 'GET' }).then(function (response) {
         q.resolve(response.data);
@@ -393,9 +437,9 @@ angular.module('brewbench-steps').factory('BrewService', function ($http, $q, $f
       return q.promise;
     },
 
-    arduinoRead: function arduinoRead(analog, sensor, timeout) {
+    arduinoRead: function arduinoRead(type, sensor, timeout) {
       var q = $q.defer();
-      var url = this.domain() + '/arduino/' + (analog ? 'analog' : 'digital') + '/' + sensor;
+      var url = this.domain() + '/arduino/' + type + '/' + sensor;
 
       $http({ url: url, method: 'GET' }).then(function (response) {
         q.resolve(response.data);

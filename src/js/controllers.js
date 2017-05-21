@@ -19,13 +19,23 @@ angular.module('brewbench-steps')
   $scope.steps = BrewService.settings('steps') || [{
     name: 'Step'
     ,pin: 2
-    ,analog: false
+    ,type: 'analog'
     ,running: false
     ,finished: false
     ,disabled: false
     ,trying: false
     ,seconds: 5
+    ,resetSeconds: 5
   }];
+
+  $scope.changeType = function(step){
+    if(step.type === 'analog')
+      step.type = 'digital';
+    else if(step.type === 'digital')
+      step.type = 'delay';
+    else if(step.type === 'delay')
+      step.type = 'analog';
+  };
 
   $scope.showSettingsSide = function(){
     $scope.showSettings = !$scope.showSettings;
@@ -52,18 +62,19 @@ angular.module('brewbench-steps')
       $scope.steps.push({
           name: 'Next Step'
           ,pin: 2
-          ,analog: false
+          ,type: 'analog'
           ,running: false
           ,finished: false
           ,disabled: false
           ,trying: false
           ,seconds: 5
+          ,resetSeconds: 5
         });
   };
 
-  $scope.pinInUse = function(pin,analog){
+  $scope.pinInUse = function(pin,type){
     return _.find($scope.steps, function(step){
-      return step.analog === analog && step.pin === pin;
+      return step.type === type && step.pin === pin;
     });
   };
 
@@ -172,15 +183,7 @@ angular.module('brewbench-steps')
 
     var start = (step.running) ? 0 : 1; //if running then stop
 
-    step.trying = true;
-    //wait for the step relay to stop
-    BrewService.arduinoWrite(step.analog, step.pin, start).then(function(response){
-      //cancel timeout if we connect
-      if(timeout)
-        $timeout.cancel(timeout);
-      step.trying = false;
-      $scope.error_message = '';
-
+    if(step.type === 'delay'){
       if(start){
         step.running = true;
         //start timer
@@ -201,18 +204,49 @@ angular.module('brewbench-steps')
             $scope.startStop($nextIndex);
         }
       }
-    },function(err){
-      if(err && typeof err == 'string')
-        $scope.error_message = err;
-      else
-        $scope.error_message = 'Could not connect to the Arduino at '+BrewService.domain();
-      // retry
-      if(!timeout){
-        timeout = $timeout(function(){
-          $scope.startStop($index);
-        },$scope.settings.retrySeconds*1000);
-      }
-    });
+    } else {
+      step.trying = true;
+      //wait for the step relay to stop
+      BrewService.arduinoWrite(step.type, step.pin, start).then(function(response){
+        //cancel timeout if we connect
+        if(timeout)
+          $timeout.cancel(timeout);
+        step.trying = false;
+        $scope.error_message = '';
+
+        if(start){
+          step.running = true;
+          //start timer
+          step.interval = $scope.stepRun($index);
+        } else {
+          //stop timer
+          step.running = false;
+          $interval.cancel(step.interval);
+          //if all timers are done send an alert
+          if(_.filter($scope.steps, {finished: true, disabled: false}).length
+            == ($scope.steps.length - _.filter($scope.steps, {disabled: true}).length) ){
+            $scope.alert($scope.steps,true);
+          }
+          //start next step if there is one
+          else if(_.filter($scope.steps, {finished: false, disabled: false}).length){
+            var $nextIndex = _.findIndex($scope.steps, {finished: false, disabled: false});
+            if($nextIndex)
+              $scope.startStop($nextIndex);
+          }
+        }
+      },function(err){
+        if(err && typeof err == 'string')
+          $scope.error_message = err;
+        else
+          $scope.error_message = 'Could not connect to the Arduino at '+BrewService.domain();
+        // retry
+        if(!timeout){
+          timeout = $timeout(function(){
+            $scope.startStop($index);
+          },$scope.settings.retrySeconds*1000);
+        }
+      });
+    }
   };
 
   $scope.loadConfig = function(){
@@ -227,7 +261,7 @@ angular.module('brewbench-steps')
   };
 
   $scope.loadConfig();
-  
+
   // scope watch
   $scope.$watch('settings',function(newValue,oldValue){
     BrewService.settings('settings',newValue);

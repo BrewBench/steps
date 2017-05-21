@@ -70,10 +70,10 @@ angular.module('brewbench-steps')
         });
         return q.promise;
     },
-    
-    arduinoWrite: function(analog,sensor,value){
+
+    arduinoWrite: function(type,sensor,value){
       var q = $q.defer();
-      var url = this.domain()+'/arduino/'+(analog?'analog':'digital')+'/'+sensor+'/'+value;
+      var url = this.domain()+'/arduino/'+type+'/'+sensor+'/'+value;
 
       $http({url: url, method: 'GET'})
         .then(function(response){
@@ -84,9 +84,9 @@ angular.module('brewbench-steps')
       return q.promise;
     },
 
-    arduinoRead: function(analog,sensor,timeout){
+    arduinoRead: function(type,sensor,timeout){
       var q = $q.defer();
-      var url = this.domain()+'/arduino/'+(analog?'analog':'digital')+'/'+sensor;
+      var url = this.domain()+'/arduino/'+type+'/'+sensor;
 
       $http({url: url, method: 'GET'})
         .then(function(response){
