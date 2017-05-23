@@ -22,7 +22,7 @@ angular.module('brewbench-steps')
     name: 'Step'
     ,pin: 2
     ,type: 'analog'
-    ,group: ''
+    ,group: 'Step Group'
     ,run: 'start/stop'
     ,running: false
     ,finished: false
@@ -77,7 +77,7 @@ angular.module('brewbench-steps')
                       name: 'Next Step'
                       ,pin: 2
                       ,type: 'analog'
-                      ,group: ''
+                      ,group: 'Step Group'
                       ,run: 'start/stop'
                       ,running: false
                       ,finished: false
