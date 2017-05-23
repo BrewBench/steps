@@ -113,7 +113,7 @@ angular.module('brewbench-steps')
     var message, icon = '/assets/img/brewbench-logo.png', color = 'good';
 
     if(step){
-      icon = '/assets/img/water.png';
+      icon = '/assets/img/steps-fill.png';
       if(!!step.finished){
         message = step.name+' is finished';
       } else if(step.length){
